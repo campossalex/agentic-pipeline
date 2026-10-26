@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AAIF Agent Stack</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo">◆</span>
+      <div>
+        <h1>AAIF Agent Stack</h1>
+        <p>LLM · Agent Skills · Context · Actions</p>
+      </div>
+    </div>
+    <div class="controls">
+      <label>Model <select id="model"></select></label>
+      <button id="new-chat" class="ghost">New chat</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <aside class="panel sidebar">
+      <section>
+        <h2><span class="dot skill"></span>Agent Skills</h2>
+        <ul id="skills" class="list"></ul>
+      </section>
+      <section>
+        <h2><span class="dot action"></span>MCP tools <small>via agentgateway</small></h2>
+        <div id="tools"></div>
+      </section>
+      <section class="links">
+        <h2>Endpoints</h2>
+        <a href="/.well-known/agent-card.json" target="_blank">A2A Agent Card</a>
+        <a href="http://localhost:15000/ui" target="_blank">agentgateway admin</a>
+        <a href="http://localhost:16686" target="_blank">Jaeger (observe profile)</a>
+      </section>
+    </aside>
+
+    <section class="panel chat">
+      <div id="messages" class="messages">
+        <div class="empty" id="empty">
+          <h2>Try a prompt</h2>
+          <button class="suggestion">Onboard the repo in /workspace/sample-app and write its AGENTS.md</button>
+          <button class="suggestion">Analyze /workspace/data/sales.csv: revenue by region and product, computed in the sandbox</button>
+          <button class="suggestion">Write a research brief on https://agents.md and https://agentskills.io</button>
+          <button class="suggestion">Our API returns "database is locked". What does the runbook say to do?</button>
+        </div>
+      </div>
+      <form id="composer" class="composer">
+        <textarea id="prompt" rows="2" placeholder="Ask the agent…  (Enter to send, Shift+Enter for newline)"></textarea>
+        <button type="submit" id="send">Send</button>
+      </form>
+    </section>
+
+    <aside class="panel trace">
+      <div class="trace-head">
+        <h2>Trace</h2>
+        <div class="legend">
+          <span><i class="dot llm"></i>LLM</span>
+          <span><i class="dot skill"></i>Skill</span>
+          <span><i class="dot context"></i>Context</span>
+          <span><i class="dot action"></i>Action</span>
+        </div>
+      </div>
+      <ol id="trace" class="timeline"></ol>
+    </aside>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>

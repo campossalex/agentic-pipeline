@@ -1,0 +1,6 @@
+fastapi==0.120.4
+uvicorn[standard]==0.38.0
+httpx==0.28.1
+pyyaml==6.0.3
+mcp==2.3.0
+a2a-sdk[fastapi]==1.2.3

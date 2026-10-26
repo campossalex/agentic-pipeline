@@ -1,0 +1,97 @@
+# yaml-language-server: $schema=https://agentgateway.dev/schema/config
+#
+# agentgateway (AAIF project) is the single egress for the agent:
+#   :4000  LLM traffic   -> Anthropic or local Ollama, selected by model prefix
+#   :3001  MCP traffic   -> every MCP server multiplexed behind one endpoint
+#   :15000 admin UI
+config:
+  adminAddr: 0.0.0.0:15000
+  readinessAddr: 0.0.0.0:15021
+
+frontendPolicies:
+  http:
+    maxBufferSize: 20971520
+  # OTLP spans for every LLM and MCP request. Only collected when the `observe`
+  # profile (Jaeger) is running; otherwise exports fail quietly.
+  tracing:
+    host: jaeger:4317
+    protocol: grpc
+    randomSampling: "true"
+
+llm:
+  port: 4000
+  models:
+  # anthropic/<model>  ->  Claude API, prefix stripped
+  - name: anthropic/*
+    provider: anthropic
+    params:
+      apiKey: $ANTHROPIC_API_KEY
+    transformation:
+      model: llmRequest.model.stripPrefix("anthropic/")
+  # openai/<model>     ->  OpenAI API, prefix stripped
+  - name: openai/*
+    provider: openAI
+    params:
+      apiKey: $OPENAI_API_KEY
+    transformation:
+      model: llmRequest.model.stripPrefix("openai/")
+  # ollama/<model>     ->  local Ollama container (`local` profile)
+  - name: ollama/*
+    provider: ollama
+    params:
+      baseUrl: http://ollama:11434/v1
+    transformation:
+      model: llmRequest.model.stripPrefix("ollama/")
+  # ollama-host/<model> ->  Ollama installed natively on the host. On macOS this uses the
+  # GPU (Metal), which Docker containers cannot, so it is much faster than `ollama/*`.
+  - name: ollama-host/*
+    provider: ollama
+    params:
+      baseUrl: http://host.docker.internal:11434/v1
+    transformation:
+      model: llmRequest.model.stripPrefix("ollama-host/")
+
+mcp:
+  port: 3001
+  # Targets from optional profiles (milvus) may be absent; don't fail the whole set.
+  failureMode: failOpen
+  prefixMode: always
+  statefulMode: stateful
+  targets:
+  - name: fs
+    mcp:
+      host: http://mcp-filesystem:8000/mcp
+  - name: git
+    mcp:
+      host: http://mcp-git:8000/mcp
+  - name: web
+    mcp:
+      host: http://mcp-fetch:8000/mcp
+    policies:
+      http:
+        requestTimeout: 60s
+  - name: sandbox
+    mcp:
+      host: http://mcp-sandbox:8000/mcp
+    policies:
+      http:
+        # First sandbox pulls the image and the execd runtime; allow for it.
+        requestTimeout: 300s
+  - name: milvus
+    mcp:
+      host: http://mcp-milvus:8000/mcp
+  policies:
+    # Authorization (least privilege): a tool that no rule allows is hidden from tools/list
+    # and denied on call. `mcp.tool.name` is the upstream (unprefixed) tool name.
+    mcpAuthorization:
+      rules:
+      - allow: >-
+          !has(mcp.tool) || !(mcp.tool.name in [
+            "git_reset", "git_checkout", "git_create_branch",
+            "move_file", "read_media_file",
+            "sandbox_connect", "sandbox_renew", "sandbox_get_endpoint", "sandbox_get_metrics",
+            "sandbox_healthcheck", "file_delete_directories", "file_move",
+            "milvus_create_collection", "milvus_insert_data", "milvus_delete_entities",
+            "milvus_release_collection", "milvus_use_database", "milvus_vector_search",
+            "milvus_hybrid_search"
+          ])
